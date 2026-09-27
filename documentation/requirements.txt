@@ -1,0 +1,14 @@
+List of Government Documents:
+1. Philippine National ID
+2. Philippine Passport
+3. Driver's License
+4. Unified Multi-Purpose ID (UMID)
+5. Professional Regulation Commission ID (PRCID)
+6. Tax Identification Number ID (TINID)
+7. Philhealth ID
+8. Voter's ID or Voter's Certification
+9. Senior Citizen ID
+10. Person with Disability ID (PWDID)
+11. NBI Clearance
+12. PSA Birth Certificate
+13. Marriage Certificates

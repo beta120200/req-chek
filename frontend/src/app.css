@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #F6F5F1;
+  --color-paper-raised: #FFFFFF;
+  --color-ink: #1C2430;
+  --color-ink-soft: #566072;
+  --color-ink-faint: #8A93A3;
+  --color-line: #E1DDD2;
+  --color-line-strong: #CFC9B9;
+
+  --color-brand: #1F3B57;
+  --color-brand-dark: #16293D;
+  --color-brand-soft: #E8EEF3;
+  --color-brand-soft-line: #CBDAE5;
+
+  --color-accent: #A8672C;
+  --color-accent-dark: #8A5423;
+  --color-accent-soft: #F5EAD9;
+
+  --color-good: #2E7D4F;
+  --color-good-soft: #E4F3EA;
+  --color-good-line: #BFE2CD;
+
+  --color-warn: #93691E;
+  --color-warn-soft: #FBF0D9;
+  --color-warn-line: #ECD79E;
+
+  --color-bad: #B23A3A;
+  --color-bad-soft: #FBE8E6;
+  --color-bad-line: #F0C2BE;
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+
