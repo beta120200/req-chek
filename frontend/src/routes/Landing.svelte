@@ -2,6 +2,7 @@
   import { push } from 'svelte-spa-router';
   import Logo from '../assets/logo.svg';
   import { api } from '../lib/api/client.js';
+  import Footer from '../lib/components/Footer.svelte';
 
   // Public service catalog from the Express API (no login needed).
   /** @type {Array<{id: string, name: string, description: string}>} */
@@ -96,13 +97,13 @@
       <!-- SERVICES DISPLAY -->
       {#if !isLoading && !error}
       <section class="mx-auto max-w-6xl px-6 py-16">
-        <h2 class="text-2xl font-extrabold tracking-tight text-ink">Available Government Services</h2>
+        <h2 class="text-2xl font-extrabold tracking-tight text-ink">Available Services</h2>
         {#if services.length > 0}
         <div class="mt-6 space-y-4">
           {#each services as service (service.id)}
           <div class="border border-line rounded-lg p-4">
             <div class="flex items-center gap-3">
-              <div class="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+              <div class="flex h-8 w-8 p-4 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
                 {service.id?.toUpperCase()?.slice(0, 2) ?? '??'}
               </div>
               <div>
@@ -150,7 +151,5 @@
       </section>
     </main>
 
-    <footer class="border-t border-line py-10 text-center text-sm text-ink-faint">
-      A personal document and requirement readiness checker &mdash; prototype UI, no backend.
-    </footer>
+    <Footer />
 </div>

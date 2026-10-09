@@ -89,33 +89,36 @@
     </div>
 
     {#if !activeService}
-      <!-- No tracked service yet -->
-    {:else if !activeService}
-      <!-- Member with no tracked service yet -->
-      <div
-        class="rounded-2xl border border-dashed border-line-strong bg-paper-raised/60 p-6"
-      >
+      <div class="rounded-2xl border border-dashed border-line-strong bg-paper-raised/60 p-6">
         <h3 class="font-bold text-ink">Pick a service to start</h3>
         <p class="mt-1 text-sm text-ink-soft">
           Choose a service to track. You can add more later from the sidebar.
         </p>
-        <div class="mt-4 space-y-3">
-          {#each data.services as service (service.id)}
-            <div
-              class="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper p-4"
-            >
-              <div>
-                <p class="font-semibold text-ink">{service.name}</p>
-                <p class="text-sm text-ink-soft">{service.tagline}</p>
-              </div>
-              <button
-                onclick={() => addFromDashboard(service)}
-                class="shrink-0 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
-                >Add</button
+        {#if data.services.length > 0}
+          <div class="mt-4 space-y-3">
+            {#each data.services as service (service.id)}
+              <div
+                class="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper p-4"
               >
-            </div>
-          {/each}
-        </div>
+                <div>
+                  <p class="font-semibold text-ink">{service.name}</p>
+                  <p class="text-sm text-ink-soft">{service.tagline}</p>
+                </div>
+                <button
+                  onclick={() => addFromDashboard(service)}
+                  class="shrink-0 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
+                  >Add</button
+                >
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="py-4 text-center">
+            <p class="text-sm text-ink-soft">
+              No services available. Use "Add a Service" in the sidebar to start tracking one.
+            </p>
+          </div>
+        {/if}
       </div>
     {:else}
       <!-- Service Tabs -->
