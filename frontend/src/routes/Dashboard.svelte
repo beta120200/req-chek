@@ -1,174 +1,281 @@
 <script>
-  import { push } from 'svelte-spa-router';
-  import { service } from '../lib/data/serviceData.js';
-  import { documents } from '../lib/state/appState.svelte.js';
-  import { authState } from '../lib/state/authState.svelte.js';
-  import { activity } from '../lib/state/activityState.svelte.js';
-  import { evaluateRequirement, readinessWord, isValid } from '../lib/data/readiness.js';
-  import { selectedServices, getActiveServiceIndex, setActiveService, getActiveService } from '../lib/state/serviceState.svelte.js';
-  import ReadinessRing from '../lib/components/ReadinessRing.svelte';
-  import StatusPill from '../lib/components/StatusPill.svelte';
+  import { push } from "svelte-spa-router";
+  import { authState } from "../lib/state/authState.svelte.js";
+  import { activity, setActivity } from "../lib/state/activityState.svelte.js";
+  import {
+    addService,
+    setActiveService,
+  } from "../lib/state/serviceState.svelte.js";
+  import { createResource } from "../lib/api/resource.svelte.js";
+  import ReadinessRing from "../lib/components/ReadinessRing.svelte";
+  import StatusPill from "../lib/components/StatusPill.svelte";
 
-  // Use the user-selected services, fallback to first service for backward compatibility
-  const activeService = $derived(getActiveService());
-  let evaluation = $derived(evaluateRequirement(documents, activeService.requirement));
-  let percent = $derived(
-    activeService.requirement.type === 'min_count'
-      ? Math.round(
-          (activeService.requirement.options.filter(function(option) {
-            return isValid(documents, option.docId);
-          }).length /
-            activeService.requirement.minCount) *
-            100
-        )
-      : Math.round(evaluation.bestPath.progress * 100)
-  );
-  let word = $derived(readinessWord(evaluation.bestPath.progress, evaluation.satisfied));
+  // GET /api/dashboard works for guests (service catalog) and members (their data).
+  const dashboard = createResource("/api/dashboard", { requireAuth: false });
 
-  let heldCount = $derived(Object.values(documents).filter((d) => d.held).length);
-  let totalCount = $derived(Object.keys(documents).length);
+  let data = $derived(dashboard.data);
+  let active = $derived(data?.active ?? null);
+  let activeService = $derived(active?.service ?? null);
+  let readiness = $derived(active?.readiness ?? null);
+  let selected = $derived(data?.selectedServices ?? []);
+
+  $effect(() => {
+    setActivity(data?.activity ?? []);
+  });
+
+  async function switchService(serviceId) {
+    if (serviceId === data?.activeServiceId) return;
+    await setActiveService(serviceId);
+    await dashboard.reload();
+  }
+
+  async function addFromDashboard(service) {
+    const result = await addService(service);
+    if (result.ok) await dashboard.reload();
+  }
+
+  /** Pill for one accepted-document path on the active service. */
+  function pathPill(path) {
+    if (path.satisfied) {
+      return path.expiringSoon
+        ? { status: "warning", label: "Expiring soon" }
+        : { status: "satisfied", label: "Have it" };
+    }
+    const prereq = path.steps.find((s) => s.role === "prerequisite");
+    if (prereq && !prereq.held)
+      return { status: "warning", label: "Prereq needed" };
+    return { status: "missing", label: "Missing" };
+  }
 </script>
 
 <div class="space-y-6">
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h2 class="text-xl font-bold text-ink">Good day, {authState.name}.</h2>
-      <p class="text-ink-soft">Know what you need before you go.</p>
+  {#if dashboard.loading}
+    <div class="py-8 text-center">
+      <p class="text-sm text-ink-soft">Loading dashboard...</p>
     </div>
-    <button
-      onclick={() => push('/app/check-readiness')}
-      class="inline-flex items-center gap-2 self-start rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-dark"
+  {:else if dashboard.error}
+    <div class="py-8 text-center">
+      <p class="text-sm text-bad">{dashboard.error}</p>
+      <button
+        onclick={dashboard.reload}
+        class="mt-3 rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+        >Try again</button
+      >
+    </div>
+  {:else if data}
+    <div
+      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
     >
-      <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-      Check Readiness
-    </button>
-  </div>
-
-  <!-- Service Tabs -->
-  {#if selectedServices.length > 1}
-    <div class="mb-4 flex space-x-2 overflow-x-auto pb-1">
-      {#each selectedServices as service, index}
+      <div>
+        <h2 class="text-xl font-bold text-ink">Good day, {authState.name}.</h2>
+        <p class="text-ink-soft">Know what you need before you go.</p>
+      </div>
+      {#if activeService}
         <button
-          class={`px-4 py-2 rounded-t-lg text-sm font-medium
-                 ${getActiveServiceIndex() === index
-                   ? 'bg-brand text-white'
-                   : 'border border-line bg-paper text-ink hover:bg-brand-soft'}`}
-          onclick={() => setActiveService(index)}
+          onclick={() => push("/app/check-readiness")}
+          class="inline-flex items-center gap-2 self-start rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-dark"
         >
-          {service.name}
+          <svg viewBox="0 0 24 24" width="16" height="16"
+            ><path
+              d="M12 5v14M5 12h14"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+            /></svg
+          >
+          Check Readiness
         </button>
-      {/each}
+      {/if}
     </div>
-  {/if}
-  
-  <!-- STATS -->
-  <div class="grid gap-4 sm:grid-cols-3">
-    <div class="rounded-xl border border-line bg-paper-raised p-4">
-      <p class="text-xs font-semibold uppercase tracking-wide text-ink-faint">Tracked service</p>
-      <p class="mt-1 text-lg font-bold text-ink">{activeService.name}</p>
-    </div>
-    <div class="rounded-xl border border-line bg-paper-raised p-4">
-      <p class="text-xs font-semibold uppercase tracking-wide text-ink-faint">Documents on hand</p>
-      <p class="mt-1 text-lg font-bold text-ink">{heldCount}</p>
-    </div>
-    <div class="rounded-xl border border-line bg-paper-raised p-4">
-      <p class="text-xs font-semibold uppercase tracking-wide text-ink-faint">Requirement status</p>
-      <p class="mt-1 text-lg font-bold {evaluation.satisfied ? 'text-good' : 'text-ink'}">{word}</p>
-    </div>
-  </div>
 
-  <div class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-    <div class="rounded-2xl border border-line bg-paper-raised p-6">
-      <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-        <ReadinessRing percent={percent} satisfied={evaluation.satisfied} size={148} label="{percent}%" sublabel={word} />
-        <div class="flex-1 space-y-3 text-center sm:text-left">
-          <p class="text-sm font-semibold uppercase tracking-wide text-ink-faint">{activeService.name}</p>
-          <p class="text-ink-soft">
-            {#if evaluation.satisfied}
-              {evaluation.bestPath.completed} of {evaluation.bestPath.total} steps completed
-            {:else}
-              {evaluation.bestPath.total - evaluation.bestPath.completed} of {evaluation.bestPath.total} steps needed
-            {/if}
-            for <strong class="text-ink">{activeService.requirement.name}</strong>
-            via <strong class="text-ink">{evaluation.bestPath.option.name}</strong>.
+    {#if !activeService}
+      <!-- No tracked service yet -->
+    {:else if !activeService}
+      <!-- Member with no tracked service yet -->
+      <div
+        class="rounded-2xl border border-dashed border-line-strong bg-paper-raised/60 p-6"
+      >
+        <h3 class="font-bold text-ink">Pick a service to start</h3>
+        <p class="mt-1 text-sm text-ink-soft">
+          Choose a service to track. You can add more later from the sidebar.
+        </p>
+        <div class="mt-4 space-y-3">
+          {#each data.services as service (service.id)}
+            <div
+              class="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper p-4"
+            >
+              <div>
+                <p class="font-semibold text-ink">{service.name}</p>
+                <p class="text-sm text-ink-soft">{service.tagline}</p>
+              </div>
+              <button
+                onclick={() => addFromDashboard(service)}
+                class="shrink-0 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
+                >Add</button
+              >
+            </div>
+          {/each}
+        </div>
+      </div>
+    {:else}
+      <!-- Service Tabs -->
+      {#if selected.length > 1}
+        <div class="mb-4 flex space-x-2 overflow-x-auto pb-1">
+          {#each selected as service (service.id)}
+            <button
+              class={`rounded-t-lg px-4 py-2 text-sm font-medium
+                     ${
+                       service.id === data.activeServiceId
+                         ? "bg-brand text-white"
+                         : "border border-line bg-paper text-ink hover:bg-brand-soft"
+                     }`}
+              onclick={() => switchService(service.id)}
+            >
+              {service.name}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- STATS -->
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div class="rounded-xl border border-line bg-paper-raised p-4">
+          <p
+            class="text-xs font-semibold uppercase tracking-wide text-ink-faint"
+          >
+            Tracked service
           </p>
-          {#if evaluation.bestPath.expiringSoon}
-            <p class="text-sm font-semibold text-warn">
-              Heads up — {evaluation.bestPath.option.name} is expiring soon.
-            </p>
-          {/if}
-          <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
-            <button
-              onclick={() => push('/app/check-readiness')}
-              class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
-            >
-              View Full Assessment
-            </button>
-            <button
-              onclick={() => push('/app/route')}
-              class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
-            >
-              See Preparation Route
-            </button>
-          </div>
+          <p class="mt-1 text-lg font-bold text-ink">{activeService.name}</p>
+        </div>
+        <div class="rounded-xl border border-line bg-paper-raised p-4">
+          <p
+            class="text-xs font-semibold uppercase tracking-wide text-ink-faint"
+          >
+            Documents on hand
+          </p>
+          <p class="mt-1 text-lg font-bold text-ink">
+            {data.stats.documentsHeld}
+          </p>
+        </div>
+        <div class="rounded-xl border border-line bg-paper-raised p-4">
+          <p
+            class="text-xs font-semibold uppercase tracking-wide text-ink-faint"
+          >
+            Requirement status
+          </p>
+          <p
+            class="mt-1 text-lg font-bold {readiness?.satisfied
+              ? 'text-good'
+              : 'text-ink'}"
+          >
+            {activeService.requirement ? readiness?.word : "No Requirement"}
+          </p>
         </div>
       </div>
 
-      <div class="mt-6 space-y-2 border-t border-line pt-5">
-        {#each evaluation.bestPath.steps as step}
-          <div class="flex items-center justify-between rounded-lg bg-paper px-3 py-2">
-            <span class="text-sm font-medium text-ink">{step.name}</span>
-            <StatusPill status={step.held ? (step.status === 'expiring' ? 'warning' : 'satisfied') : 'missing'}>
-              {step.held ? (step.status === 'expiring' ? 'Expiring soon' : 'Satisfied') : 'Missing'}
-            </StatusPill>
+      <div class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+        <div class="rounded-2xl border border-line bg-paper-raised p-6">
+          <div
+            class="flex flex-col items-center gap-6 sm:flex-row sm:items-start"
+          >
+            <ReadinessRing
+              percent={readiness?.percent ?? 0}
+              satisfied={readiness?.satisfied ?? false}
+              size={148}
+              label="{readiness?.percent ?? 0}%"
+              sublabel={readiness?.word ?? ""}
+            />
+            <div class="flex-1 space-y-3 text-center sm:text-left">
+              <p
+                class="text-sm font-semibold uppercase tracking-wide text-ink-faint"
+              >
+                {activeService.name}
+              </p>
+              <p class="text-ink-soft">
+                {#if !activeService.requirement}
+                  No requirement defined
+                {:else if readiness?.satisfied}
+                  Your {activeService.requirement.name} requirement is satisfied
+                  — you're ready to go.
+                {:else}
+                  Still needed for {activeService.requirement.name}.
+                {/if}
+              </p>
+              <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
+                <button
+                  onclick={() => push("/app/assessment")}
+                  class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                >
+                  View Full Assessment
+                </button>
+                <button
+                  onclick={() => push("/app/route")}
+                  class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+                >
+                  See Preparation Route
+                </button>
+              </div>
+            </div>
           </div>
-        {/each}
-      </div>
-    </div>
 
-    <div class="space-y-4">
-      <div class="rounded-2xl border border-line bg-paper-raised p-5">
-        <h3 class="font-bold text-ink">Shortcuts</h3>
-        <div class="mt-3 space-y-2">
-          <button
-            onclick={() => push('/app/documents')}
-            class="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink hover:border-brand hover:bg-brand-soft"
-          >
-            My Documents
-            <span class="text-ink-faint">&rarr;</span>
-          </button>
-          <button
-            onclick={() => push('/app/dependency-map')}
-            class="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink hover:border-brand hover:bg-brand-soft"
-          >
-            Dependency Map
-            <span class="text-ink-faint">&rarr;</span>
-          </button>
-          <button
-            onclick={() => push('/app/requirements')}
-            class="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink hover:border-brand hover:bg-brand-soft"
-          >
-            Requirements Directory
-            <span class="text-ink-faint">&rarr;</span>
-          </button>
+          <div class="mt-6 space-y-2 border-t border-line pt-5">
+            {#if active.paths.length > 0}
+              {#each active.paths as path (path.option.id)}
+                {@const pill = pathPill(path)}
+                <div
+                  class="flex items-center justify-between rounded-lg bg-paper px-3 py-2"
+                >
+                  <span class="text-sm font-medium text-ink"
+                    >{path.option.name}</span
+                  >
+                  <StatusPill status={pill.status}>{pill.label}</StatusPill>
+                </div>
+              {/each}
+            {:else}
+              <div class="py-4 text-center">
+                <p class="text-sm text-ink-soft">
+                  No requirement options available
+                </p>
+              </div>
+            {/if}
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="rounded-2xl border border-line bg-paper-raised p-5">
+            <h3 class="font-bold text-ink">Shortcuts</h3>
+            <div class="mt-3 space-y-2">
+              {#each [["/app/documents", "My Documents"], ["/app/dependency-map", "Dependency Map"], ["/app/requirements", "Requirements Directory"]] as [path, label]}
+                <button
+                  onclick={() => push(path)}
+                  class="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink hover:border-brand hover:bg-brand-soft"
+                >
+                  {label}
+                  <span class="text-ink-faint">&rarr;</span>
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-line bg-paper-raised p-5">
+            <h3 class="font-bold text-ink">Recent activity</h3>
+            {#if activity.items.length === 0}
+              <p class="mt-2 text-sm text-ink-faint">
+                Nothing yet — try adding a document.
+              </p>
+            {:else}
+              <ul class="mt-3 space-y-2.5">
+                {#each activity.items as entry (entry.id)}
+                  <li class="text-sm">
+                    <p class="text-ink">{entry.title}</p>
+                    <p class="text-xs text-ink-faint">{entry.time}</p>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
         </div>
       </div>
-
-      <div class="rounded-2xl border border-line bg-paper-raised p-5">
-        <h3 class="font-bold text-ink">Recent activity</h3>
-        {#if activity.items.length === 0}
-          <p class="mt-2 text-sm text-ink-faint">Nothing yet — try toggling a document.</p>
-        {:else}
-          <ul class="mt-3 space-y-2.5">
-            {#each activity.items as entry}
-              <li class="text-sm">
-                <p class="text-ink">{entry.title}</p>
-                <p class="text-xs text-ink-faint">{entry.time}</p>
-              </li>
-            {/each}
-          </ul>
-        {/if}
-      </div>
-    </div>
-  </div>
+    {/if}
+  {/if}
 </div>

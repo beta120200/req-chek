@@ -1,11 +1,18 @@
 <script>
   import { push } from 'svelte-spa-router';
-  import { DOCUMENT_LIBRARY } from '../lib/data/serviceData.js';
-  import { documents, saveDocument, removeDocument } from '../lib/state/appState.svelte.js';
-  import { documentStatus, daysUntilExpiry } from '../lib/data/readiness.js';
+  import { authState } from '../lib/state/authState.svelte.js';
+  import {
+    documentLibrary,
+    documents,
+    documentsStatus,
+    loadDocuments,
+    saveDocument,
+    removeDocument,
+  } from '../lib/state/appState.svelte.js';
   import StatusPill from '../lib/components/StatusPill.svelte';
   import Modal from '../lib/components/Modal.svelte';
 
+  // UI state
   let search = $state('');
   let filter = $state('all');
   let sort = $state('name');
@@ -13,72 +20,110 @@
   const statusPillMap = { valid: 'satisfied', expiring: 'warning', expired: 'missing', 'not-held': 'neutral' };
   const statusLabelMap = { valid: 'Valid', expiring: 'Expiring soon', expired: 'Expired', 'not-held': 'Not held' };
 
+  // Refresh from the API whenever the page opens for a signed-in user (App also loads on login).
+  $effect(() => {
+    if (authState.ready) loadDocuments();
+  });
+
   let rows = $derived(
-    Object.values(DOCUMENT_LIBRARY).map((docType) => {
+    Object.values(documentLibrary).map((docType) => {
       const record = documents[docType.id];
-      const status = documentStatus(documents, docType.id);
-      return { ...docType, ...record, status, remaining: daysUntilExpiry(documents, docType.id) };
-    })
+      return {
+        ...docType,
+        held: record?.held ?? false,
+        issueDate: record?.issueDate ?? null,
+        expiryDate: record?.expiryDate ?? null,
+        notes: record?.notes ?? '',
+        status: record?.held ? record.status : 'not-held',
+        remaining: record?.remaining ?? null,
+      };
+    }),
   );
 
-  let filtered = $derived(
-    rows
-      .filter((r) => r.name.toLowerCase().includes(search.toLowerCase()))
-      .filter((r) => {
-        if (filter === 'all') return true;
-        if (filter === 'valid') return r.status === 'valid';
-        if (filter === 'expiring') return r.status === 'expiring';
-        if (filter === 'expired') return r.status === 'expired';
-        return true;
-      })
+  let filtered = $derived.by(() => {
+    const q = search.trim().toLowerCase();
+    return rows
+      .filter((r) => r.name.toLowerCase().includes(q))
+      .filter((r) => filter === 'all' || r.status === filter)
       .sort((a, b) => {
-        if (sort === 'name') return a.name.localeCompare(b.name);
-        if (sort === 'status') return a.status.localeCompare(b.status);
-        if (sort === 'expiry') return (a.expiryDate ?? '9999').localeCompare(b.expiryDate ?? '9999');
-        return 0;
-      })
-  );
+        if (sort === 'expiry') {
+          const A = a.expiryDate ? Date.parse(a.expiryDate) : Infinity;
+          const B = b.expiryDate ? Date.parse(b.expiryDate) : Infinity;
+          return A === B ? a.name.localeCompare(b.name) : A < B ? -1 : 1;
+        }
+        if (sort === 'status') return a.status.localeCompare(b.status) || a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name);
+      });
+  });
 
   // --- Add/Edit modal ---
   let showDocModal = $state(false);
+  /** @type {string | null} */
   let editingId = $state(null);
   let formIssueDate = $state('');
   let formExpiryDate = $state('');
   let formNotes = $state('');
+  let formError = $state('');
+  let saving = $state(false);
+
+  let editingDoc = $derived(editingId ? documentLibrary[editingId] : null);
+  let editingHeld = $derived(editingId ? !!documents[editingId]?.held : false);
+
+  function fillForm(docId) {
+    const record = documents[docId];
+    formIssueDate = record?.issueDate ?? '';
+    formExpiryDate = record?.expiryDate ?? '';
+    formNotes = record?.notes ?? '';
+    formError = '';
+  }
 
   function openAddModal() {
-    const firstNotHeld = Object.values(DOCUMENT_LIBRARY).find((d) => !documents[d.id].held);
-    editingId = firstNotHeld?.id ?? Object.values(DOCUMENT_LIBRARY)[0].id;
-    formIssueDate = '';
-    formExpiryDate = '';
-    formNotes = '';
+    const all = Object.values(documentLibrary);
+    if (all.length === 0) return;
+    const firstNotHeld = all.find((d) => !documents[d.id]?.held);
+    editingId = (firstNotHeld ?? all[0]).id;
+    fillForm(editingId);
     showDocModal = true;
   }
 
+  /** @param {string} docId */
   function openEditModal(docId) {
     editingId = docId;
-    const record = documents[docId];
-    formIssueDate = record.issueDate ?? '';
-    formExpiryDate = record.expiryDate ?? '';
-    formNotes = record.notes ?? '';
+    fillForm(docId);
     showDocModal = true;
   }
 
-  function submitDocForm(e) {
+  /** @param {Event} e */
+  async function submitDocForm(e) {
     e.preventDefault();
-    saveDocument(editingId, {
+    if (!editingId || saving) return;
+    saving = true;
+    formError = '';
+    const result = await saveDocument(editingId, {
       issueDate: formIssueDate || null,
-      expiryDate: formExpiryDate || null,
+      expiryDate: editingDoc?.expirable ? formExpiryDate || null : null,
       notes: formNotes,
     });
+    saving = false;
+    if (!result.ok) {
+      formError = result.error ?? 'Could not save the document.';
+      return;
+    }
     showDocModal = false;
   }
 
   // --- Confirm delete modal ---
+  /** @type {string | null} */
   let pendingDeleteId = $state(null);
+  let removeError = $state('');
 
-  function confirmRemove() {
-    removeDocument(pendingDeleteId);
+  async function confirmRemove() {
+    if (!pendingDeleteId) return;
+    const result = await removeDocument(pendingDeleteId);
+    if (!result.ok) {
+      removeError = result.error ?? 'Could not remove the document.';
+      return;
+    }
     pendingDeleteId = null;
   }
 </script>
@@ -130,67 +175,85 @@
   </div>
 
   <div class="rounded-2xl border border-line bg-paper-raised">
-    {#each filtered as doc, i}
-      <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between {i !== 0 ? 'border-t border-line' : ''}">
-        <div>
-          <p class="font-semibold text-ink">{doc.name}</p>
-          <p class="text-sm text-ink-soft">Source: {doc.source}</p>
-          {#if doc.held && doc.expirable}
-            <p class="text-xs text-ink-faint">
-              {doc.expiryDate
-                ? `Expires ${doc.expiryDate}${doc.remaining !== null && doc.remaining >= 0 ? ` (${doc.remaining} day${doc.remaining === 1 ? '' : 's'})` : ''}`
-                : 'No expiration date on file'}
-            </p>
-          {/if}
-          {#if doc.notes}
-            <p class="mt-0.5 text-xs italic text-ink-faint">{doc.notes}</p>
-          {/if}
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <StatusPill status={statusPillMap[doc.status]}>{statusLabelMap[doc.status]}</StatusPill>
-          {#if doc.held}
-            <button
-              onclick={() => openEditModal(doc.id)}
-              aria-label="Edit {doc.name}"
-              class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-brand-soft hover:text-brand"
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15"><path d="M4 20h4l10.5-10.5a2 2 0 0 0-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-            </button>
-            <button
-              onclick={() => (pendingDeleteId = doc.id)}
-              aria-label="Remove {doc.name}"
-              class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-bad-soft hover:text-bad"
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15"><path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          {:else}
-            <button
-              onclick={() => openEditModal(doc.id)}
-              class="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand hover:bg-brand-soft"
-            >
-              Add details
-            </button>
-          {/if}
-        </div>
+    {#if !documentsStatus.loaded && documentsStatus.loading}
+      <div class="text-center py-8">
+        <p class="text-sm text-ink-soft">Loading documents...</p>
       </div>
+    {:else if documentsStatus.error && !documentsStatus.loaded}
+      <div class="text-center py-8">
+        <p class="text-sm text-bad">{documentsStatus.error}</p>
+        <button onclick={loadDocuments} class="mt-3 rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">Try again</button>
+      </div>
+    {:else if filtered.length > 0}
+      {#each filtered as doc, i (doc.id)}
+        <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between {i !== 0 ? 'border-t border-line' : ''}">
+          <div>
+            <p class="font-semibold text-ink">{doc.name}</p>
+            <p class="text-sm text-ink-soft">Source: {doc.source}</p>
+            {#if doc.held && doc.expirable}
+              <p class="text-xs text-ink-faint">
+                {doc.expiryDate
+                  ? `Expires ${doc.expiryDate}${doc.remaining !== null && doc.remaining >= 0 ? ` (${doc.remaining} day${doc.remaining === 1 ? '' : 's'})` : ''}`
+                  : 'No expiration date on file'}
+              </p>
+            {/if}
+            {#if doc.notes}
+              <p class="mt-0.5 text-xs italic text-ink-faint">{doc.notes}</p>
+            {/if}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <StatusPill status={statusPillMap[doc.status]}>{statusLabelMap[doc.status]}</StatusPill>
+            {#if doc.held}
+              <button
+                onclick={() => openEditModal(doc.id)}
+                aria-label="Edit {doc.name}"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-brand-soft hover:text-brand"
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M4 20h4l10.5-10.5a2 2 0 0 0-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+              </button>
+              <button
+                onclick={() => (pendingDeleteId = doc.id)}
+                aria-label="Remove {doc.name}"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-bad-soft hover:text-bad"
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1-1l1-12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            {:else}
+              <button
+                onclick={() => openEditModal(doc.id)}
+                class="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+              >
+                Add details
+              </button>
+            {/if}
+          </div>
+        </div>
+      {/each}
     {:else}
-      <p class="p-6 text-center text-sm text-ink-faint">No documents match your search.</p>
-    {/each}
+      <p class="p-6 text-center text-sm text-ink-faint">No documents found.</p>
+    {/if}
   </div>
 </div>
 
 {#if showDocModal}
-  <Modal title={documents[editingId].held ? `Edit ${DOCUMENT_LIBRARY[editingId].name}` : `Add ${DOCUMENT_LIBRARY[editingId].name}`} onClose={() => (showDocModal = false)}>
+  <Modal
+    title={editingDoc ? `${editingHeld ? 'Edit' : 'Add'} ${editingDoc.name}` : 'Add Document'}
+    onClose={() => (showDocModal = false)}
+  >
     {#snippet children()}
       <form id="doc-form" class="space-y-4" onsubmit={submitDocForm}>
+        {#if formError}
+          <p class="rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{formError}</p>
+        {/if}
         <label class="block">
           <span class="text-sm font-medium text-ink">Document type</span>
           <select
             bind:value={editingId}
+            onchange={() => editingId && fillForm(editingId)}
             class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none"
           >
-            {#each Object.values(DOCUMENT_LIBRARY) as d}
+            {#each Object.values(documentLibrary) as d}
               <option value={d.id}>{d.name}</option>
             {/each}
           </select>
@@ -199,7 +262,7 @@
           <span class="text-sm font-medium text-ink">Issue date</span>
           <input type="date" bind:value={formIssueDate} class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
         </label>
-        {#if DOCUMENT_LIBRARY[editingId].expirable}
+        {#if editingDoc?.expirable}
           <label class="block">
             <span class="text-sm font-medium text-ink">Expiration date</span>
             <input type="date" bind:value={formExpiryDate} class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none" />
@@ -216,23 +279,26 @@
       <button onclick={() => (showDocModal = false)} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">
         Cancel
       </button>
-      <button type="submit" form="doc-form" class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark">
-        {documents[editingId].held ? 'Save Changes' : 'Add Document'}
+      <button type="submit" form="doc-form" disabled={saving} class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60">
+        {saving ? 'Saving…' : editingHeld ? 'Save Changes' : 'Add Document'}
       </button>
     {/snippet}
   </Modal>
 {/if}
 
 {#if pendingDeleteId}
-  <Modal title="Remove document?" size="sm" onClose={() => (pendingDeleteId = null)}>
+  <Modal title="Remove document?" size="sm" onClose={() => { pendingDeleteId = null; removeError = ''; }}>
     {#snippet children()}
       <p class="text-sm text-ink-soft">
-        This will remove {DOCUMENT_LIBRARY[pendingDeleteId].name} from your inventory. ReqCheck never stored
-        a file for it, so this just clears the record.
+        This will remove {documentLibrary[pendingDeleteId ?? '']?.name ?? 'this document'} from your inventory.
+        ReqCheck never stored a file for it, so this just clears the record.
       </p>
+      {#if removeError}
+        <p class="mt-3 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{removeError}</p>
+      {/if}
     {/snippet}
     {#snippet footer()}
-      <button onclick={() => (pendingDeleteId = null)} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">
+      <button onclick={() => { pendingDeleteId = null; removeError = ''; }} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">
         Cancel
       </button>
       <button onclick={confirmRemove} class="rounded-lg bg-bad px-4 py-2 text-sm font-semibold text-white hover:bg-red-800">
@@ -241,3 +307,4 @@
     {/snippet}
   </Modal>
 {/if}
+

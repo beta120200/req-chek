@@ -7,7 +7,7 @@
 {#if authState.isGuest && !uiState.guestBannerDismissed}
   <div class="flex flex-wrap items-center gap-3 border-b border-brand-soft-line bg-brand-soft px-4 py-2.5 text-sm text-brand-dark md:px-8">
     <svg viewBox="0 0 24 24" width="16" height="16" class="shrink-0"><path d="M12 3.5l7 3.2v5.1c0 4.6-3 8.7-7 9.7-4-1-7-5.1-7-9.7V6.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-    <span class="font-medium">You're browsing as a guest — your documents won't be saved after you close this tab.</span>
+    <span class="font-medium">You're browsing as a guest — your documents stay in this tab and are lost on reload. Create an account to keep them.</span>
     <button
       onclick={() => push('/register')}
       class="ml-auto rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-dark"

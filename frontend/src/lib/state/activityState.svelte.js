@@ -1,16 +1,16 @@
-// Recent-activity feed shown on the Dashboard. Purely cosmetic —
-// entries are capped and just describe what happened, when.
+// Recent-activity feed shown on the Dashboard. The entries are recorded by the
+// backend (user_activity table) and arrive with GET /api/dashboard.
 export const activity = $state({ items: [] });
 
-let counter = 0;
-
-function timeLabel() {
-  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function timeLabel(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export function logActivity(title, detail = '') {
-  activity.items.unshift({ id: ++counter, title, detail, time: timeLabel() });
-  if (activity.items.length > 8) activity.items.length = 8;
+/** @param {Array<{id: string, title: string, createdAt: string}>} items */
+export function setActivity(items) {
+  activity.items = items.map((a) => ({ id: a.id, title: a.title, time: timeLabel(a.createdAt) }));
 }
 
 export function clearActivity() {

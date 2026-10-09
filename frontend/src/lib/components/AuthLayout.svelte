@@ -1,5 +1,6 @@
 <script>
   import { push } from 'svelte-spa-router';
+  import logo from '../../assets/logo.svg';
 
   let { title, subtitle = '', children } = $props();
 </script>
@@ -8,8 +9,8 @@
   <header class="border-b border-line bg-paper-raised">
     <div class="mx-auto flex h-16 max-w-6xl items-center gap-3 px-6">
       <button onclick={() => push('/')} class="flex items-center gap-2 text-lg font-extrabold tracking-tight text-ink">
-        <span class="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-white">
-          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 12.5 9.5 18 20 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="flex h-7 w-7 items-center justify-center">
+          <img src={logo} alt="ReqCheck Logo" />
         </span>
         ReqCheck
       </button>

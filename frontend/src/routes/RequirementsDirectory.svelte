@@ -1,60 +1,35 @@
 <script>
-  import { service, DOCUMENT_LIBRARY } from '../lib/data/serviceData.js';
-  import { documents } from '../lib/state/appState.svelte.js';
-  import { documentStatus } from '../lib/data/readiness.js';
+  import { createResource } from '../lib/api/resource.svelte.js';
+  import { authState } from '../lib/state/authState.svelte.js';
   import StatusPill from '../lib/components/StatusPill.svelte';
+
+  // Public data: guests see everything (without status); members see their active service.
+  const directory = createResource('/api/requirements-directory', { requireAuth: false });
 
   let search = $state('');
   let statusFilter = $state('all');
 
-  function statusOf(entry) {
-    if (entry.kind === 'requirement') {
-      const anyValid = service[0].requirement.options.some(
-        (o) => documentStatus(documents, o.docId) === 'valid' || documentStatus(documents, o.docId) === 'expiring'
-      );
-      return anyValid ? 'satisfied' : 'missing';
-    }
-    const s = documentStatus(documents, entry.docId);
-    if (s === 'valid') return 'satisfied';
-    if (s === 'expiring') return 'warning';
-    if (s === 'expired') return 'missing';
-    return 'missing';
-  }
+  let entries = $derived(directory.data ?? []);
+  let hasStatus = $derived(entries.some((e) => e.status));
 
-  let entries = $derived([
-    {
-      kind: 'requirement',
-      name: service[0].requirement.name,
-      source: service[0].requirement.source,
-      lastVerified: service[0].requirement.lastVerified,
-      note: service[0].requirement.why,
-    },
-    ...Object.values(DOCUMENT_LIBRARY).map((d) => ({
-      kind: 'document',
-      docId: d.id,
-      name: d.name,
-      source: d.source,
-      lastVerified: d.lastVerified,
-      note: d.expirable ? 'This document type can expire.' : 'This document type does not expire.',
-    })),
-  ]);
+  let filtered = $derived.by(() => {
+    const q = search.trim().toLowerCase();
+    return entries
+      .filter((entry) => entry.name.toLowerCase().includes(q))
+      .filter((entry) => statusFilter === 'all' || entry.status === statusFilter);
+  });
 
-  let filtered = $derived(
-    entries.filter((entry) => {
-      const matchesSearch = entry.name.toLowerCase().includes(search.toLowerCase());
-      const st = statusOf(entry);
-      const matchesStatus = statusFilter === 'all' || st === statusFilter;
-      return matchesSearch && matchesStatus;
-    })
-  );
-
-  const statusLabel = { satisfied: 'Satisfied', warning: 'Expiring', missing: 'Missing' };
+  const statusLabel = {
+    satisfied: 'Satisfied',
+    warning: 'Expiring',
+    missing: 'Missing',
+  };
 </script>
 
 <div class="space-y-6">
   <div>
     <h2 class="text-xl font-bold text-ink">Requirements Directory</h2>
-    <p class="text-ink-soft">Browse every requirement ReqCheck tracks for {service[0].name}, and where it comes from.</p>
+    <p class="text-ink-soft">Browse the requirements and documents ReqCheck tracks, and where each one comes from.</p>
   </div>
 
   <div class="flex flex-col gap-3 sm:flex-row">
@@ -67,26 +42,50 @@
         class="w-full rounded-lg border border-line-strong py-2.5 pl-9 pr-3 text-sm focus:border-brand focus:outline-none"
       />
     </div>
-    <select bind:value={statusFilter} class="rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none">
-      <option value="all">All statuses</option>
-      <option value="satisfied">Satisfied</option>
-      <option value="warning">Expiring</option>
-      <option value="missing">Missing</option>
-    </select>
+    {#if hasStatus}
+      <select bind:value={statusFilter} class="rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none">
+        <option value="all">All statuses</option>
+        <option value="satisfied">Satisfied</option>
+        <option value="warning">Expiring</option>
+        <option value="missing">Missing</option>
+      </select>
+    {/if}
   </div>
 
   <div class="rounded-2xl border border-line bg-paper-raised">
-    {#each filtered as entry, i}
-      <div class="flex flex-col gap-2 p-5 sm:flex-row sm:items-start sm:justify-between {i !== 0 ? 'border-t border-line' : ''}">
-        <div>
-          <p class="font-semibold text-ink">{entry.name}</p>
-          <p class="mt-0.5 text-sm text-ink-soft">{entry.note}</p>
-          <p class="mt-1 text-xs text-ink-faint">Source: {entry.source} &middot; Last verified: {entry.lastVerified}</p>
-        </div>
-        <StatusPill status={statusOf(entry)}>{statusLabel[statusOf(entry)]}</StatusPill>
+    {#if directory.loading}
+      <div class="text-center py-8">
+        <p class="text-sm text-ink-soft">Loading requirements directory...</p>
       </div>
+    {:else if directory.error}
+      <div class="text-center py-8">
+        <p class="text-sm text-bad">{directory.error}</p>
+      </div>
+    {:else if entries.length === 0}
+      <p class="p-6 text-center text-sm text-ink-faint">No requirements found.</p>
+    {:else if filtered.length === 0}
+      <p class="p-6 text-center text-sm text-ink-faint">Nothing matches your search.</p>
     {:else}
-      <p class="p-6 text-center text-sm text-ink-faint">No requirements match your search.</p>
-    {/each}
+      {#each filtered as entry, i (`${entry.kind}:${entry.docId ?? entry.name}`)}
+        <div class="flex flex-col gap-2 p-5 sm:flex-row sm:items-start sm:justify-between {i !== 0 ? 'border-t border-line' : ''}">
+          <div>
+            <p class="font-semibold text-ink">{entry.name}</p>
+            {#if entry.note}
+              <p class="mt-0.5 text-sm text-ink-soft">{entry.note}</p>
+            {/if}
+            {#if entry.source || entry.lastVerified}
+              <p class="mt-1 text-xs text-ink-faint">
+                {#if entry.source}Source: {entry.source}{/if}
+                {#if entry.source && entry.lastVerified} &middot; {/if}
+                {#if entry.lastVerified}Last verified: {entry.lastVerified}{/if}
+              </p>
+            {/if}
+          </div>
+          {#if entry.status}
+            <StatusPill status={entry.status}>{statusLabel[entry.status]}</StatusPill>
+          {/if}
+        </div>
+      {/each}
+    {/if}
   </div>
 </div>

@@ -18,7 +18,7 @@
     },
     {
       q: 'Is this connected to a real government system?',
-      a: 'No — this is a frontend prototype. Nothing is submitted to COMELEC or any other agency, and there is no backend.',
+      a: 'No. Nothing is submitted to COMELEC or any other agency.',
     },
   ];
 </script>

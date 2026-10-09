@@ -3,7 +3,6 @@
   import { openMobileSidebar } from '../state/uiState.svelte.js';
   import { authState, initialsOf, logout } from '../state/authState.svelte.js';
   import { notificationState, unreadCount, markAllRead } from '../state/notificationState.svelte.js';
-  import { resetDocuments, hydrateForCurrentUser } from '../state/appState.svelte.js';
   import Logo from '../../assets/logo.svg';
   
   const titles = {
@@ -47,13 +46,7 @@
   function handleLogout() {
     closeDropdowns();
     logout();
-    hydrateForCurrentUser();
     push('/');
-  }
-
-  function handleReset() {
-    closeDropdowns();
-    resetDocuments();
   }
 </script>
 
@@ -137,12 +130,11 @@
         >
           <div class="px-4 py-2">
             <p class="text-sm font-semibold text-ink">{authState.name}</p>
-            <p class="text-xs text-ink-faint">{authState.isGuest ? 'Guest session — not saved' : authState.email}</p>
+            <p class="text-xs text-ink-faint">{authState.isGuest ? 'Guest session — log in to save your data' : authState.email}</p>
           </div>
           <div class="my-1 border-t border-line"></div>
           <button onclick={() => goTo('/app/settings')} class="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-paper">Settings</button>
           <button onclick={() => goTo('/app/help')} class="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-paper">Help</button>
-          <button onclick={handleReset} class="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-paper">Reset demo data</button>
           <div class="my-1 border-t border-line"></div>
           {#if authState.isGuest}
             <button onclick={() => goTo('/login')} class="block w-full px-4 py-2 text-left text-sm font-semibold text-brand hover:bg-paper">Log in</button>

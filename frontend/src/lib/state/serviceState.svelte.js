@@ -1,119 +1,82 @@
 // ============================================================
-// User-selected services state with sessionStorage persistence
+// The user's tracked services, loaded from the Express API.
+//
+//   GET    /api/check-readiness              -> tracked services + readiness
+//   POST   /api/add-service                  -> track a service (becomes active)
+//   PUT    /api/user-services/:id/active     -> switch the active service
+//   DELETE /api/user-services/:id            -> stop tracking a service
 // ============================================================
+import { api } from '../api/client.js';
+import { showToast } from './toastState.svelte.js';
+import { authState } from './authState.svelte.js';
+import { dataVersion } from '../api/resource.svelte.js';
+import { guestAddService, guestSetActiveService, guestRemoveService } from './guestState.svelte.js';
 
-import { service as ALL_SERVICES } from '../../lib/data/serviceData.js';
+export const serviceState = $state({
+  /** @type {Array<{id: string, name: string, [key: string]: any}>} */
+  selected: [],
+  /** @type {string | null} */
+  activeServiceId: null,
+  loaded: false,
+});
 
-// Storage key for sessionStorage
-const STORAGE_KEY = 'reqcheck:selectedServices';
-
-// Check if sessionStorage is available
-function hasSessionStorage() {
-  return typeof sessionStorage !== 'undefined';
-}
-
-// Load selected services from sessionStorage
-function loadSelectedServices() {
-  if (!hasSessionStorage()) return null;
+export async function loadServices() {
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
+    const data = await api.get('/api/check-readiness');
+    serviceState.selected = data.selectedServices;
+    serviceState.activeServiceId = data.activeServiceId;
+    serviceState.loaded = true;
+  } catch (err) {
+    console.error('Failed to load services:', err);
   }
 }
 
-// Save selected services to sessionStorage
-function saveSelectedServices(services) {
-  if (!hasSessionStorage()) return;
+export function resetServices() {
+  serviceState.selected = [];
+  serviceState.activeServiceId = null;
+  serviceState.loaded = false;
+}
+
+/**
+ * Track a service and make it the active one.
+ * @param {{id: string, name?: string}} serviceToAdd
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+export async function addService(serviceToAdd) {
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(services));
-  } catch {
-    /* ignore */
+    if (authState.isGuest) guestAddService(serviceToAdd.id, serviceToAdd.name);
+    else await api.post('/api/add-service', { serviceId: serviceToAdd.id });
+    await loadServices();
+    dataVersion.n++;
+    showToast(`${serviceToAdd.name || 'Service'} added to your dashboard.`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Could not add the service.' };
   }
 }
 
-// Initialize selected services from sessionStorage or default to first service
-const initialServices = loadSelectedServices();
-export const selectedServices = $state(initialServices ?? [ALL_SERVICES[0]]);
-
-// Index of the currently active service in selectedServices array
-let activeServiceIndex = $state(0);
-
-// Get the currently active service
-let activeService = $derived(selectedServices[activeServiceIndex]);
-
-/**
- * Add a service to the user's selected services if not already present
- * @param {Object} serviceToAdd - The service object to add
- */
-export function addService(serviceToAdd) {
-  // Check if service is already in the list
-  const exists = selectedServices.some(s => s.id === serviceToAdd.id);
-
-  if (!exists) {
-    selectedServices.push(serviceToAdd);
-    // Set the newly added service as active
-    activeServiceIndex = selectedServices.length - 1;
-
-    // Persist to sessionStorage
-    saveSelectedServices(selectedServices);
-
-    // Show success toast
-    const toastState = require('./toastState.svelte.js').toastState;
-    toastState.show(`${serviceToAdd.name} added to your dashboard.`);
+/** @param {string} serviceId */
+export async function setActiveService(serviceId) {
+  try {
+    if (authState.isGuest) guestSetActiveService(serviceId);
+    else await api.put(`/api/user-services/${encodeURIComponent(serviceId)}/active`, {});
+    serviceState.activeServiceId = serviceId;
+    dataVersion.n++;
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Could not switch service.' };
   }
 }
 
-/**
- * Get the index of the currently active service
- */
-export function getActiveServiceIndex() {
-  return activeServiceIndex;
-}
-
-/**
- * Set the active service by index
- * @param {number} index - Index of the service to set as active
- */
-export function setActiveService(index) {
-  if (index >= 0 && index < selectedServices.length) {
-    activeServiceIndex = index;
-    // Persist to sessionStorage when active service changes
-    saveSelectedServices(selectedServices);
+/** @param {string} serviceId */
+export async function removeService(serviceId) {
+  try {
+    if (authState.isGuest) guestRemoveService(serviceId);
+    else await api.delete(`/api/user-services/${encodeURIComponent(serviceId)}`);
+    await loadServices();
+    dataVersion.n++;
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'Could not remove the service.' };
   }
-}
-
-/**
- * Remove a service from selected services
- * @param {string} serviceId - ID of the service to remove
- */
-export function removeService(serviceId) {
-  const index = selectedServices.findIndex(s => s.id === serviceId);
-
-  if (index !== -1) {
-    selectedServices.splice(index, 1);
-
-    // Adjust active index if needed
-    if (activeServiceIndex >= selectedServices.length) {
-      activeServiceIndex = Math.max(0, selectedServices.length - 1);
-    }
-
-    // Ensure we always have at least one service
-    if (selectedServices.length === 0) {
-      // Add back the default service if none remain
-      selectedServices.push(ALL_SERVICES[0]);
-      activeServiceIndex = 0;
-    }
-
-    // Persist to sessionStorage
-    saveSelectedServices(selectedServices);
-  }
-}
-
-/**
- * Get the currently active service
- */
-export function getActiveService() {
-  return activeService;
 }

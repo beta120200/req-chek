@@ -1,14 +1,20 @@
 <script>
   import { push } from 'svelte-spa-router';
   import { authState, logout } from '../lib/state/authState.svelte.js';
-  import { resetDocuments, hydrateForCurrentUser } from '../lib/state/appState.svelte.js';
+  import { resetDocuments } from '../lib/state/appState.svelte.js';
 
   let notifsEnabled = $state(true);
 
-  function handleLogout() {
-    logout();
-    hydrateForCurrentUser();
+  let confirmingClear = $state(false);
+
+  async function handleLogout() {
+    await logout();
     push('/');
+  }
+
+  async function clearDocuments() {
+    await resetDocuments();
+    confirmingClear = false;
   }
 </script>
 
@@ -29,11 +35,9 @@
         </div>
         <p class="text-sm text-ink-soft">
           {#if authState.isGuest}
-            Browsing as a guest — your documents are kept in memory only and will be lost when you close
-            this tab.
+            You're browsing as a guest. Create an account or log in to save your documents.
           {:else}
-            Signed in as {authState.name} ({authState.email}) — your documents are saved to this browser
-            and reload automatically next time you log in here.
+            Signed in as {authState.email}. Your documents are saved to your account.
           {/if}
         </p>
       </div>
@@ -64,14 +68,21 @@
       </button>
     </div>
 
-    <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p class="font-semibold text-ink">Reset demo data</p>
-        <p class="text-sm text-ink-soft">Restore all documents to their original demo state.</p>
+      <div class="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="font-semibold text-ink">Clear my documents</p>
+          <p class="text-sm text-ink-soft">Remove every document record from your account.</p>
+        </div>
+        {#if confirmingClear}
+          <div class="flex gap-2 self-start">
+            <button onclick={clearDocuments} class="rounded-lg bg-bad px-4 py-2 text-sm font-semibold text-white hover:opacity-90">Yes, clear all</button>
+            <button onclick={() => (confirmingClear = false)} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">Cancel</button>
+          </div>
+        {:else}
+          <button onclick={() => (confirmingClear = true)} class="self-start rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">
+            Clear
+          </button>
+        {/if}
       </div>
-      <button onclick={resetDocuments} class="self-start rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">
-        Reset
-      </button>
-    </div>
   </div>
 </div>

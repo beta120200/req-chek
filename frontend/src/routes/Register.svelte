@@ -2,20 +2,23 @@
   import { push } from 'svelte-spa-router';
   import AuthLayout from '../lib/components/AuthLayout.svelte';
   import { register, continueAsGuest, authState } from '../lib/state/authState.svelte.js';
-  import { hydrateForCurrentUser } from '../lib/state/appState.svelte.js';
   import { showToast } from '../lib/state/toastState.svelte.js';
-  
+
   let fname = $state('');
   let lname = $state('');
-  let name = $derived(`${fname} ${lname}`);
+  let name = $derived(`${fname} ${lname}`.trim());
   let email = $state('');
   let password = $state('');
   let confirm = $state('');
   let error = $state('');
+  let info = $state('');
+  let submitting = $state(false);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
+    if (submitting) return;
     error = '';
+    info = '';
     if (!name || !email || !password) {
       error = 'Please fill in every field.';
       return;
@@ -28,33 +31,39 @@
       error = 'Passwords do not match.';
       return;
     }
-    const result = register(name, email, password);
+    submitting = true;
+    const result = await register(name, email, password);
+    submitting = false;
     if (!result.ok) {
-      error = result.error;
+      error = result.error ?? 'Registration failed.';
       return;
     }
-    hydrateForCurrentUser();
+    if (result.needsEmailConfirmation) {
+      // Supabase is set to confirm emails first: there is no session yet.
+      info = `We sent a confirmation link to ${email}. Open it, then log in.`;
+      return;
+    }
     showToast(`Account created — welcome, ${authState.name}.`);
     push('/app');
   }
 
   function guest() {
     continueAsGuest();
-    hydrateForCurrentUser();
     push('/app');
   }
 </script>
 
-<AuthLayout title="Create Account" subtitle="Save your document inventory and readiness progress to this browser.">
+<AuthLayout title="Create Account" subtitle="Save your document inventory and readiness progress to your account.">
   {#snippet children()}
-    <p class="mb-4 flex items-start gap-2 rounded-lg bg-brand-soft/60 p-3 text-xs text-ink-soft">
-      <svg viewBox="0 0 24 24" width="15" height="15" class="mt-0.5 shrink-0 text-brand"><path d="M12 3.5l7 3.2v5.1c0 4.6-3 8.7-7 9.7-4-1-7-5.1-7-9.7V6.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-      This is a prototype — accounts live only in this browser's storage, and ReqCheck never asks for or
-      stores your actual government ID, scans, or files.
-    </p>
-
+    
     {#if error}
       <p class="mb-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>
+    {/if}
+    {#if info}
+      <p class="mb-4 rounded-lg bg-good-soft px-3 py-2 text-sm text-good">
+        {info}
+        <button type="button" onclick={() => push('/login')} class="ml-1 font-semibold underline">Go to log in</button>
+      </p>
     {/if}
 
     <form class="space-y-4" onsubmit={submit}>
@@ -82,6 +91,7 @@
         <span class="text-sm font-medium text-ink">Email</span>
         <input
           type="email"
+          autocomplete="email"
           bind:value={email}
           placeholder="you@example.com"
           class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none"
@@ -91,6 +101,7 @@
         <span class="text-sm font-medium text-ink">Password</span>
         <input
           type="password"
+          autocomplete="new-password"
           bind:value={password}
           placeholder="At least 6 characters"
           class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none"
@@ -100,13 +111,18 @@
         <span class="text-sm font-medium text-ink">Confirm password</span>
         <input
           type="password"
+          autocomplete="new-password"
           bind:value={confirm}
           placeholder="Re-enter your password"
           class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none"
         />
       </label>
-      <button type="submit" class="w-full rounded-lg bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-dark">
-        Create Account
+      <button
+        type="submit"
+        disabled={submitting}
+        class="w-full rounded-lg bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {submitting ? 'Creating account…' : 'Create Account'}
       </button>
     </form>
 
