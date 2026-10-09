@@ -1,9 +1,11 @@
 <script>
   import { createResource } from '../lib/api/resource.svelte.js';
+  import { serviceState, setActiveService } from '../lib/state/serviceState.svelte.js';
   import AuthRequired from '../lib/components/AuthRequired.svelte';
 
   const preparation = createResource('/api/preparation');
   let steps = $derived(preparation.data ?? []);
+  let activeService = $derived(serviceState.selected.find(s => s.id === serviceState.activeServiceId) ?? null);
 </script>
 
 <div class="space-y-6">
@@ -22,6 +24,42 @@
       <p class="text-sm text-bad">{preparation.error}</p>
     </div>
   {:else}
+    {#if activeService}
+      <div class="mb-4">
+        <div class="flex items-center gap-3 rounded-xl border border-line bg-paper-raised p-3">
+          <div class="flex-1">
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              Currently Selected Service
+            </p>
+            <p class="text-lg font-bold text-ink">{activeService.name}</p>
+          </div>
+        </div>
+      </div>
+    {/if}
+    {#if serviceState.selected.length > 0}
+      <div class="mb-4">
+        <div>
+
+          <select
+            bind:value={serviceState.activeServiceId}
+            onchange={async () => {
+              if (serviceState.activeServiceId) {
+                await setActiveService(serviceState.activeServiceId);
+              }
+            }}
+            class="block w-48 rounded-md border border-line bg-paper-raised px-2 py-1 text-sm text-ink focus:outline-none"
+          >
+            {#if serviceState.selected.length > 0}
+              {#each serviceState.selected as service (service.id)}
+                <option value={service.id}>
+                  {service.name}
+                </option>
+              {/each}
+            {/if}
+          </select>
+        </div>
+      </div>
+    {/if}
     <div>
       <h2 class="text-xl font-bold text-ink">Your Preparation Route</h2>
       <p class="text-ink-soft">

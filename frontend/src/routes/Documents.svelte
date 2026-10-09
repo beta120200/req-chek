@@ -11,6 +11,8 @@
   } from '../lib/state/appState.svelte.js';
   import StatusPill from '../lib/components/StatusPill.svelte';
   import Modal from '../lib/components/Modal.svelte';
+  import Edit from '../assets/pencil.svg';
+  import Trash from '../assets/trash.svg';
 
   // UI state
   let search = $state('');
@@ -210,14 +212,14 @@
                 aria-label="Edit {doc.name}"
                 class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-brand-soft hover:text-brand"
               >
-                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M4 20h4l10.5-10.5a2 2 0 0 0-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+                <img src={Edit} alt="Edit" width="15" height="15" />
               </button>
               <button
                 onclick={() => (pendingDeleteId = doc.id)}
                 aria-label="Remove {doc.name}"
                 class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-bad-soft hover:text-bad"
               >
-                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 12a1 1 0 0 0 1-1l1-12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <img src={Trash} alt="Remove" width="15" height="15" />
               </button>
             {:else}
               <button

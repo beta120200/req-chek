@@ -114,7 +114,7 @@
     {/each}
   </nav>
 
-  <div class="space-y-1 border-t border-line p-3">
+  <div class="w-full space-y-1 sticky bottom-0   border-t border-line p-3">
     {#each bottomLinks as link}
       <button
         onclick={() => go(link.path)}
