@@ -64,7 +64,7 @@
         onclick={() => (notifsEnabled = !notifsEnabled)}
         class="relative h-7 w-12 shrink-0 rounded-full transition-colors {notifsEnabled ? 'bg-good' : 'bg-line-strong'}"
       >
-        <span class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform {notifsEnabled ? 'translate-x-6' : 'translate-x-1'}"></span>
+        <span class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform {notifsEnabled ? 'translate-x-1' : 'translate-x-[-23px]'}"></span>
       </button>
     </div>
 
