@@ -58,7 +58,7 @@
   }
 
   async function analyze() {
-        if (!imageUrl || !selectedType || analyzing) return;
+    if (!imageUrl || !selectedType || analyzing) return;
 
     const file = fileInput?.files?.[0];
     if (!file) {

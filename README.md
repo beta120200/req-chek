@@ -40,10 +40,3 @@ The backend verifies the token with `supabase.auth.getUser(token)`. On a 401 the
 | GET/POST | `/api/add-service` | required | Available services / track one |
 | PUT/DELETE | `/api/user-services/:id/active`, `/api/user-services/:id` | required | Switch / remove tracked service |
 | POST | `/api/id-check` | required | OCR an ID photo (multipart `idImage` + `idType`) |
-
-## Production notes (not done for you)
-
-- Add rate limiting on `/api/auth/*` (e.g. `express-rate-limit`) and `helmet`.
-- Tokens are in `localStorage`; httpOnly cookies are the hardened alternative.
-- tesseract.js downloads its English language data on first use; allow that egress or self-host it (`langPath`).
-- Serve the frontend and API over HTTPS and set `FRONTEND_URL` / `VITE_API_BASE_URL` to the real origins.

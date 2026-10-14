@@ -66,7 +66,7 @@
     {/if}
 
     <div class="rounded-2xl border border-dashed border-line-strong bg-paper-raised/60 p-6 text-center text-sm text-ink-faint">
-      More service templates (Barangay Clearance, Passport, Business Permit) are on the roadmap.
+      More service templates (Barangay Clearance, Business Permit) are on the roadmap.
     </div>
   {/if}
 </div>
