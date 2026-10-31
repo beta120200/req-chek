@@ -16,13 +16,13 @@ import idCheckRoutes from './routes/idCheckRoutes.js';
 import { authenticate, optionalAuthenticate } from './middleware/authMiddleware.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 app.disable('x-powered-by');
 
 // FRONTEND_URL may hold several comma-separated origins, e.g.
 // "http://localhost:5173,https://reqcheck.example.com"
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+const allowedOrigins = (process.env.FRONTEND_URL)
   .split(',')
   .map((o) => o.trim().replace(/\/$/, ''))
   .filter(Boolean);
