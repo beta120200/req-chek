@@ -209,7 +209,7 @@
 
     {#if analyzing}
       <div
-        class="w-full rounded-lg bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-50"
+        class="w-full rounded-lg bg-accent py-3 text-sm font-semibold text-white text-center hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-50"
       >
         Analyzing…
       </div>

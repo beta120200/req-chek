@@ -139,13 +139,13 @@
     <div class="flex gap-2">
       <button
         onclick={() => push('/app/id-check')}
-        class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+        class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft"
       >
         Verify an ID
       </button>
       <button
         onclick={openAddModal}
-        class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
+        class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:bg-accent-dark"
       >
         <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
         Add Document
@@ -163,13 +163,13 @@
         class="w-full rounded-lg border border-line-strong py-2.5 pl-9 pr-3 text-sm focus:border-brand focus:outline-none"
       />
     </div>
-    <select bind:value={filter} class="rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none">
+    <select bind:value={filter} class="rounded-lg border border-line-strong px-3 py-2.5 text-sm cursor-pointer focus:border-brand focus:outline-none">
       <option value="all">All statuses</option>
       <option value="valid">Valid</option>
       <option value="expiring">Expiring soon</option>
       <option value="expired">Expired</option>
     </select>
-    <select bind:value={sort} class="rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none">
+    <select bind:value={sort} class="rounded-lg border border-line-strong px-3 py-2.5 text-sm cursor-pointer focus:border-brand focus:outline-none">
       <option value="name">Sort: Name</option>
       <option value="expiry">Sort: Expiry date</option>
       <option value="status">Sort: Status</option>
@@ -184,7 +184,7 @@
     {:else if documentsStatus.error && !documentsStatus.loaded}
       <div class="text-center py-8">
         <p class="text-sm text-bad">{documentsStatus.error}</p>
-        <button onclick={loadDocuments} class="mt-3 rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">Try again</button>
+        <button onclick={loadDocuments} class="mt-3 rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft">Try again</button>
       </div>
     {:else if filtered.length > 0}
       {#each filtered as doc, i (doc.id)}
@@ -210,21 +210,21 @@
               <button
                 onclick={() => openEditModal(doc.id)}
                 aria-label="Edit {doc.name}"
-                class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-brand-soft hover:text-brand"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft cursor-pointer hover:bg-brand-soft hover:text-brand"
               >
                 <img src={Edit} alt="Edit" width="15" height="15" />
               </button>
               <button
                 onclick={() => (pendingDeleteId = doc.id)}
                 aria-label="Remove {doc.name}"
-                class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-bad-soft hover:text-bad"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft cursor-pointer hover:bg-bad-soft hover:text-bad"
               >
                 <img src={Trash} alt="Remove" width="15" height="15" />
               </button>
             {:else}
               <button
                 onclick={() => openEditModal(doc.id)}
-                class="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+                class="rounded-lg border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft"
               >
                 Add details
               </button>
@@ -253,7 +253,7 @@
           <select
             bind:value={editingId}
             onchange={() => editingId && fillForm(editingId)}
-            class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm focus:border-brand focus:outline-none"
+            class="mt-1 w-full rounded-lg border border-line-strong px-3 py-2.5 text-sm cursor-pointer focus:border-brand focus:outline-none"
           >
             {#each Object.values(documentLibrary) as d}
               <option value={d.id}>{d.name}</option>
@@ -278,10 +278,10 @@
       </form>
     {/snippet}
     {#snippet footer()}
-      <button onclick={() => (showDocModal = false)} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">
+      <button onclick={() => (showDocModal = false)} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft">
         Cancel
       </button>
-      <button type="submit" form="doc-form" disabled={saving} class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60">
+      <button type="submit" form="doc-form" disabled={saving} class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60">
         {saving ? 'Saving…' : editingHeld ? 'Save Changes' : 'Add Document'}
       </button>
     {/snippet}
@@ -300,10 +300,10 @@
       {/if}
     {/snippet}
     {#snippet footer()}
-      <button onclick={() => { pendingDeleteId = null; removeError = ''; }} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft">
+      <button onclick={() => { pendingDeleteId = null; removeError = ''; }} class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft">
         Cancel
       </button>
-      <button onclick={confirmRemove} class="rounded-lg bg-bad px-4 py-2 text-sm font-semibold text-white hover:bg-red-800">
+      <button onclick={confirmRemove} class="rounded-lg bg-bad px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:bg-red-800">
         Remove
       </button>
     {/snippet}

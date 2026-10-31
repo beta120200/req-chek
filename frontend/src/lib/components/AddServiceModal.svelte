@@ -80,7 +80,7 @@
               type="button"
               disabled={addingId !== null}
               onclick={() => choose(serviceItem)}
-              class="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-4 py-3 text-left hover:bg-brand-soft/50 disabled:opacity-60"
+              class="flex w-full items-center justify-between rounded-lg border border-line bg-paper px-4 py-3 text-left cursor-pointer hover:bg-brand-soft/50 disabled:opacity-60"
             >
               <div>
                 <p class="font-semibold text-ink">{serviceItem.name}</p>
@@ -101,7 +101,7 @@
     {#if authState.isGuest}
       <button
         onclick={onClose}
-        class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+        class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:bg-brand-dark"
         >Done</button
       >
     {/if}

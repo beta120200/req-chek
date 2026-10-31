@@ -41,7 +41,7 @@
       {#each readiness.data.selectedServices as service (service.id)}
         <button
           onclick={() => openAssessment(service)}
-          class="flex w-full flex-col gap-4 rounded-2xl border border-line bg-paper-raised p-6 text-left shadow-sm transition hover:border-brand hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+          class="flex w-full flex-col gap-4 rounded-2xl border border-line bg-paper-raised p-6 text-left shadow-sm transition cursor-pointer hover:border-brand hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
             <h3 class="text-lg font-bold text-ink">{service.name}</h3>

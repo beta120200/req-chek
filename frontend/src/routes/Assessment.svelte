@@ -27,7 +27,7 @@
   {:else if data}
     <button
       onclick={() => push('/app/check-readiness')}
-      class="flex items-center gap-1.5 text-sm font-semibold text-ink-soft hover:text-brand"
+      class="flex items-center gap-1.5 text-sm font-semibold text-ink-soft cursor-pointer hover:text-brand cursor-pointer"
     >
       <svg viewBox="0 0 24 24" width="15" height="15"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Back to services
@@ -50,13 +50,13 @@
     <div class="flex flex-wrap gap-3">
       <button
         onclick={() => push('/app/dependency-map')}
-        class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+        class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft"
       >
         View Dependency Map
       </button>
       <button
         onclick={() => push('/app/route')}
-        class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+        class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft"
       >
         View Preparation Route
       </button>

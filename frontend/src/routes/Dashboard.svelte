@@ -106,7 +106,7 @@
                 </div>
                 <button
                   onclick={() => addFromDashboard(service)}
-                  class="shrink-0 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
+                  class="shrink-0 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white cursor-pointer hover:bg-brand-dark"
                   >Add</button
                 >
               </div>
@@ -130,7 +130,7 @@
                      ${
                        service.id === data.activeServiceId
                          ? "bg-brand text-white"
-                         : "border border-line bg-paper text-ink hover:bg-brand-soft"
+                         : "border border-line bg-paper text-ink cursor-pointer hover:bg-brand-soft"
                      }`}
               onclick={() => switchService(service.id)}
             >
@@ -207,13 +207,13 @@
               <div class="flex flex-wrap justify-center gap-2 sm:justify-start">
                 <button
                   onclick={() => push("/app/assessment")}
-                  class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                  class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:bg-brand-dark"
                 >
                   View Full Assessment
                 </button>
                 <button
                   onclick={() => push("/app/route")}
-                  class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+                  class="rounded-lg border border-line-strong px-4 py-2 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft"
                 >
                   See Preparation Route
                 </button>
@@ -251,7 +251,7 @@
               {#each [["/app/documents", "My Documents"], ["/app/dependency-map", "Dependency Map"], ["/app/requirements", "Requirements Directory"]] as [path, label]}
                 <button
                   onclick={() => push(path)}
-                  class="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink hover:border-brand hover:bg-brand-soft"
+                  class="flex w-full items-center justify-between rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink cursor-pointer hover:border-brand hover:bg-brand-soft"
                 >
                   {label}
                   <span class="text-ink-faint">&rarr;</span>

@@ -65,7 +65,7 @@
       <button
         type="submit"
         disabled={submitting}
-        class="w-full rounded-lg bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-60"
+        class="w-full rounded-lg bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-dark cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? 'Logging in…' : 'Log In'}
       </button>
@@ -79,14 +79,14 @@
 
     <button
       onclick={guest}
-      class="w-full rounded-lg border border-line-strong py-3 text-sm font-semibold text-ink hover:border-brand hover:bg-brand-soft"
+      class="w-full rounded-lg border border-line-strong py-3 text-sm font-semibold text-ink cursor-pointer hover:border-brand hover:bg-brand-soft"
     >
       Continue as Guest
     </button>
 
     <p class="mt-6 text-center text-sm text-ink-soft">
       New to ReqCheck?
-      <button onclick={() => push('/register')} class="font-semibold text-brand hover:underline">Create an account</button>
+      <button onclick={() => push('/register')} class="font-semibold text-brand cursor-pointer hover:underline">Create an account</button>
     </p>
   {/snippet}
 </AuthLayout>

@@ -48,13 +48,13 @@
       </nav>
       <button
         onclick={() => push('/login')}
-        class="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft hover:text-brand"
+        class="rounded-lg px-3 py-2 text-sm font-semibold text-ink-soft cursor-pointer hover:text-brand"
       >
         Log in
       </button>
       <button
         onclick={() => push('/app')}
-        class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-dark"
+        class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:bg-accent-dark"
       >
         Get Started
       </button>
@@ -141,7 +141,7 @@
         </h2>
         <button
           onclick={() => push('/app')}
-          class="mt-6 rounded-lg bg-accent px-6 py-3 font-semibold text-white hover:bg-accent-dark"
+          class="mt-6 rounded-lg bg-accent px-6 py-3 font-semibold text-white cursor-pointer hover:bg-accent-dark"
         >
           Get Started
         </button>
